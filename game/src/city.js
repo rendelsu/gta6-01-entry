@@ -1,141 +1,122 @@
-// City generation for SOLMAR — Vice Harbor.
-// World: 3840 x 2880. 12 avenues (vertical) x 9 streets (horizontal), 5 districts.
-import { hash2, rand, pick } from './util.js';
+// SOLMAR — Vice Harbor: the city map. A 3840x2880 grid city, 12 avenues by
+// 9 streets, split into 5 districts with their own palettes and skylines.
 
-export const WORLD_W = 3840;
-export const WORLD_H = 2880;
-export const ROAD_W = 64;
-export const AVENUES = 12;
-export const STREETS = 9;
+const CITY_W = 3840;
+const CITY_H = 2880;
+const AVENUES = 12;          // vertical roads
+const STREETS = 9;           // horizontal roads
+const BLOCK = 320;           // avenue/street spacing
+const ROAD_W = 68;           // road width
+const SIDEWALK = 14;
 
-export function avenueX(i) { return 200 + i * 320; }
-export function streetY(j) { return 200 + j * 320; }
+function avenueX(i) { return i * BLOCK + BLOCK / 2; }
+function streetY(j) { return j * BLOCK + BLOCK / 2; }
 
-export const DISTRICTS = [
-  { name: 'MARINA BAY',   x: 0,    y: 0,    w: 1280, h: 960,  ground: '#c9b183', accent: '#2e7f9e' },
-  { name: 'DOWNTOWN',     x: 1280, y: 0,    w: 1280, h: 960,  ground: '#8f8f96', accent: '#c8a24a' },
-  { name: 'OLD TOWN',     x: 2560, y: 0,    w: 1280, h: 960,  ground: '#b59a7a', accent: '#7e4a3a' },
-  { name: 'HARBOR DOCKS', x: 0,    y: 960,  w: 1920, h: 1920, ground: '#7d8a86', accent: '#3a6e8f' },
-  { name: 'VICE HARBOR',  x: 1920, y: 960,  w: 1920, h: 1920, ground: '#a89a7d', accent: '#e07b39' },
+const DISTRICTS = [
+  { id: 'portside', name: 'Portside', x0: 0, y0: 0, x1: 960, y1: 2880,
+    ground: '#5d6b52', block: '#6d7a5e', roof: '#7d8a6e', accent: '#c98f2e',
+    desc: 'Docks, cranes and warehouses on the harbor.' },
+  { id: 'oldtown', name: 'Old Town', x0: 960, y0: 0, x1: 1920, y1: 1440,
+    ground: '#8a7a5e', block: '#9a8a6a', roof: '#b08a5a', accent: '#a8542e',
+    desc: 'Brick storefronts and the old plaza.' },
+  { id: 'northhills', name: 'North Hills', x0: 1920, y0: 0, x1: 3840, y1: 1440,
+    ground: '#6f7f5e', block: '#7d8f6a', roof: '#8a6a4a', accent: '#4a7a5a',
+    desc: 'Quiet houses and pine trees above the bay.' },
+  { id: 'downtown', name: 'Downtown', x0: 960, y0: 1440, x1: 2560, y1: 2880,
+    ground: '#6a6a72', block: '#7a7a84', roof: '#4a4a58', accent: '#3aa0c8',
+    desc: 'Glass towers, neon and the Vice Harbor strip.' },
+  { id: 'marina', name: 'Marina Bay', x0: 2560, y0: 1440, x1: 3840, y1: 2880,
+    ground: '#7a8a80', block: '#8a9a8c', roof: '#c8b890', accent: '#2e8a9a',
+    desc: 'Yachts, beach bars and the boardwalk.' },
 ];
 
-export function districtAt(x, y) {
+function districtAt(x, y) {
   for (const d of DISTRICTS) {
-    if (x >= d.x && x < d.x + d.w && y >= d.y && y < d.y + d.h) return d;
+    if (x >= d.x0 && x < d.x1 && y >= d.y0 && y < d.y1) return d;
   }
-  return DISTRICTS[4];
+  return DISTRICTS[3];
 }
 
-const BUILDING_COLORS = ['#b08d6e', '#9a8f7a', '#7e8ba0', '#a06e5a', '#8a7a5c', '#6e7f8a', '#b59a7a', '#96705a'];
-const SHOP_NAMES = [
-  'TACOS EL SOL', 'VICE LIQUOR', 'DONUTS 24H', 'BARBER JOE', 'LAUNDRY LUNA',
-  'PIZZA MARINA', 'PAWN SHOP', 'BURGER BAY', 'PHARMACY+', 'CLUB NEON',
-  'GYM IRON', 'FISH MARKET', 'HOTEL PALMA', 'ARCADE PIXEL', 'BAKERY SOL',
-  'TATTOO INK', 'AUTO REPAIR', 'FLOWER ROSA', 'CAFE AMANECER', 'SUSHI KAI',
-];
-const SHOP_COLORS = ['#e74c3c', '#f39c12', '#2ecc71', '#9b59b6', '#3498db', '#e67e22', '#1abc9c', '#d35400'];
+// A road's center line is at avenueX(i) / streetY(j); a point is on a road when
+// it sits within ROAD_W/2 of one of those lines.
+function onRoad(x, y) {
+  const ax = ((x - BLOCK / 2) % BLOCK + BLOCK) % BLOCK;
+  const ay = ((y - BLOCK / 2) % BLOCK + BLOCK) % BLOCK;
+  const dx = Math.min(ax, BLOCK - ax);
+  const dy = Math.min(ay, BLOCK - ay);
+  return dx <= ROAD_W / 2 || dy <= ROAD_W / 2;
+}
+function nearestAvenue(x) { return clamp(Math.round((x - BLOCK / 2) / BLOCK), 0, AVENUES - 1); }
+function nearestStreet(y) { return clamp(Math.round((y - BLOCK / 2) / BLOCK), 0, STREETS - 1); }
 
-export function buildCity() {
-  const buildings = [];
-  const shops = [];
-  const parks = [];
-  const parking = [];
-  let shopIdx = 0;
-  // One building (or park) per block between roads.
-  for (let i = 0; i < AVENUES - 1; i++) {
-    for (let j = 0; j < STREETS - 1; j++) {
-      const bx0 = avenueX(i) + ROAD_W / 2 + 14;
-      const by0 = streetY(j) + ROAD_W / 2 + 14;
-      const bw = 320 - ROAD_W - 28;
-      const bh = 320 - ROAD_W - 28;
-      const h = hash2(i, j);
-      const d = districtAt(bx0 + bw / 2, by0 + bh / 2);
-      if (h < 0.12) {
-        parks.push({ x: bx0, y: by0, w: bw, h: bh, trees: 6 + Math.floor(h * 40) });
+// Buildings: one deterministic set per block, generated once at load.
+const BUILDINGS = [];
+function buildCity() {
+  const rng = mulberry32(20261119);
+  BUILDINGS.length = 0;
+  for (let i = 0; i < AVENUES; i++) {
+    for (let j = 0; j < STREETS; j++) {
+      const bx = i * BLOCK + ROAD_W / 2 + SIDEWALK;
+      const by = j * BLOCK + ROAD_W / 2 + SIDEWALK;
+      const bw = BLOCK - ROAD_W - SIDEWALK * 2;
+      const bh = BLOCK - ROAD_W - SIDEWALK * 2;
+      const cx = bx + bw / 2, cy = by + bh / 2;
+      const d = districtAt(cx, cy);
+      const isPark = rng() < 0.12;
+      if (isPark) {
+        BUILDINGS.push({ x: bx, y: by, w: bw, h: bh, kind: 'park', d });
         continue;
       }
-      // Split some blocks into two buildings.
-      const split = h > 0.55;
-      const parts = split ? 2 : 1;
-      for (let p = 0; p < parts; p++) {
-        const w2 = split ? bw / 2 - 6 : bw;
-        const x2 = split ? bx0 + p * (bw / 2 + 6) : bx0;
-        const tall = d.name === 'DOWNTOWN' ? 5 + Math.floor(hash2(i * 7, j * 3 + p) * 9) : 1 + Math.floor(hash2(i * 3, j * 5 + p) * 4);
-        const b = {
-          x: x2, y: by0, w: w2, h: bh,
-          color: pick(BUILDING_COLORS), tall,
-          district: d.name,
-          seed: hash2(i * 11 + p, j * 13),
-        };
-        buildings.push(b);
-        // Ground-floor shop facing the avenue on the west edge of the block.
-        if (hash2(i * 17 + p, j * 19) < 0.42) {
-          shops.push({
-            x: x2, y: by0 + bh - 26, w: Math.min(w2, 150), h: 26,
-            name: SHOP_NAMES[shopIdx % SHOP_NAMES.length],
-            color: SHOP_COLORS[shopIdx % SHOP_COLORS.length],
-          });
-          shopIdx++;
-        }
-      }
-      // A few parked cars along the block edge.
-      if (hash2(i * 23, j * 29) < 0.5) {
-        parking.push({ x: avenueX(i) + ROAD_W / 2 + 8, y: streetY(j) + ROAD_W / 2 + 60 + hash2(i, j * 3) * 120, vertical: true });
+      const downtown = d.id === 'downtown';
+      const n = downtown ? (rng() < 0.5 ? 1 : 2) : randInt(2, 4);
+      for (let k = 0; k < n; k++) {
+        const w = downtown ? rand(90, 150) : rand(60, 110);
+        const h = downtown ? rand(90, 150) : rand(60, 110);
+        const px = bx + rng() * (bw - w);
+        const py = by + rng() * (bh - h);
+        const tall = downtown && rng() < 0.55;
+        BUILDINGS.push({
+          x: px, y: py, w, h,
+          kind: tall ? 'tower' : (rng() < 0.3 ? 'shop' : 'house'),
+          d, floors: tall ? randInt(8, 22) : randInt(1, 3),
+          hue: rng(),
+        });
       }
     }
   }
-  return { buildings, shops, parks, parking };
 }
 
-// Is a point on a road (drivable)? Roads are the avenue/street bands.
-export function onRoad(x, y) {
-  for (let i = 0; i < AVENUES; i++) {
-    if (Math.abs(x - avenueX(i)) <= ROAD_W / 2) return true;
-  }
-  for (let j = 0; j < STREETS; j++) {
-    if (Math.abs(y - streetY(j)) <= ROAD_W / 2) return true;
-  }
-  return false;
-}
-export function nearestRoadPoint(x, y) {
-  let best = null, bestD = Infinity;
-  for (let i = 0; i < AVENUES; i++) {
-    const ax = avenueX(i);
-    const d = Math.abs(x - ax);
-    if (d < bestD) { bestD = d; best = { x: ax, y, vertical: true }; }
-  }
-  for (let j = 0; j < STREETS; j++) {
-    const sy = streetY(j);
-    const d = Math.abs(y - sy);
-    if (d < bestD) { bestD = d; best = { x, y: sy, vertical: false }; }
-  }
-  return best;
-}
-// Nearest avenue/street centre, clamped into the world.
-export function nearestAvenue(x) {
-  let best = avenueX(0), bd = Infinity;
-  for (let i = 0; i < AVENUES; i++) { const d = Math.abs(x - avenueX(i)); if (d < bd) { bd = d; best = avenueX(i); } }
-  return best;
-}
-export function nearestStreet(y) {
-  let best = streetY(0), bd = Infinity;
-  for (let j = 0; j < STREETS; j++) { const d = Math.abs(y - streetY(j)); if (d < bd) { bd = d; best = streetY(j); } }
-  return best;
-}
-// Circle vs building collision: returns push-out offset or null.
-export function collideBuildings(x, y, r, buildings) {
-  let px = 0, py = 0;
-  for (const b of buildings) {
-    const cx = Math.max(b.x, Math.min(x, b.x + b.w));
-    const cy = Math.max(b.y, Math.min(y, b.y + b.h));
-    const dx = x - cx, dy = y - cy;
+// Circle-vs-building collision: push the circle out, return true on hit.
+function collideBuildings(x, y, r) {
+  let hit = false;
+  for (const b of BUILDINGS) {
+    if (b.kind === 'park') continue;
+    const nx = clamp(x, b.x, b.x + b.w);
+    const ny = clamp(y, b.y, b.y + b.h);
+    const dx = x - nx, dy = y - ny;
     const d2 = dx * dx + dy * dy;
     if (d2 < r * r) {
-      const d = Math.sqrt(d2) || 0.001;
-      const push = r - d;
-      px += (dx / d) * push;
-      py += (dy / d) * push;
+      hit = true;
+      const d = Math.sqrt(d2) || 0.01;
+      const push = (r - d) / d;
+      x += dx * push; y += dy * push;
     }
   }
-  return { x: px, y: py };
+  return { x, y, hit };
+}
+
+// The harbor: water along the west edge and the south-east marina.
+function inWater(x, y) {
+  if (x < 90) return true;
+  if (x > 3600 && y > 2500) return true;
+  return false;
+}
+
+function randomRoadPoint() {
+  if (chance(0.5)) return { x: avenueX(randInt(0, AVENUES - 1)), y: rand(80, CITY_H - 80) };
+  return { x: rand(80, CITY_W - 80), y: streetY(randInt(0, STREETS - 1)) };
+}
+function randomSidewalkPoint() {
+  const p = randomRoadPoint();
+  return { x: clamp(p.x + rand(-70, 70), 40, CITY_W - 40), y: clamp(p.y + rand(-70, 70), 40, CITY_H - 40) };
 }

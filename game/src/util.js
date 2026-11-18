@@ -1,35 +1,41 @@
-// Shared math and random helpers for SOLMAR — Vice Harbor.
-export function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
-export function lerp(a, b, t) { return a + (b - a) * t; }
-export function dist2(ax, ay, bx, by) { const dx = ax - bx, dy = ay - by; return dx * dx + dy * dy; }
-export function dist(ax, ay, bx, by) { return Math.sqrt(dist2(ax, ay, bx, by)); }
-export function angleTo(ax, ay, bx, by) { return Math.atan2(by - ay, bx - ax); }
-export function angleDiff(a, b) {
-  let d = (b - a) % (Math.PI * 2);
-  if (d > Math.PI) d -= Math.PI * 2;
-  if (d < -Math.PI) d += Math.PI * 2;
+// SOLMAR — Vice Harbor: shared helpers (seeded RNG, math, geometry).
+// Plain classic script; every file in this game shares the global scope.
+
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function dist(ax, ay, bx, by) { const dx = bx - ax, dy = by - ay; return Math.sqrt(dx * dx + dy * dy); }
+function angleTo(ax, ay, bx, by) { return Math.atan2(by - ay, bx - ax); }
+function angleDiff(a, b) {
+  let d = b - a;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
   return d;
 }
-export function rand(a, b) { return a + Math.random() * (b - a); }
-export function randInt(a, b) { return Math.floor(rand(a, b + 1)); }
-export function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-export function choiceWeighted(pairs) {
-  let total = 0;
-  for (const p of pairs) total += p[1];
-  let r = Math.random() * total;
-  for (const p of pairs) { r -= p[1]; if (r <= 0) return p[0]; }
-  return pairs[pairs.length - 1][0];
+function rand(lo, hi) { return lo + Math.random() * (hi - lo); }
+function randInt(lo, hi) { return Math.floor(rand(lo, hi + 1)); }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function chance(p) { return Math.random() < p; }
+
+// Deterministic RNG so the city layout is identical on every load.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
-// Deterministic hash-based pseudo random for city generation (stable city layout).
-export function hash2(x, y) {
-  let h = (x * 374761393 + y * 668265263) | 0;
-  h = (h ^ (h >> 13)) | 0; h = Math.imul(h, 1274126177);
-  h = (h ^ (h >> 16)) >>> 0;
-  return h / 4294967295;
-}
-export function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+
+function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
-export function pointInRect(px, py, rx, ry, rw, rh) {
-  return px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
+
+function fmtMoney(n) { return '$' + Math.floor(n).toLocaleString('en-US'); }
+function fmtClock(minutes) {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = Math.floor(minutes % 60);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  return hh + ':' + String(m).padStart(2, '0') + ' ' + ap;
 }
