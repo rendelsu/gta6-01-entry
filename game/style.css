@@ -1,0 +1,31 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #120a1e;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+}
+#wrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(1200px 700px at 50% 30%, #2a1445 0%, #120a1e 70%);
+}
+#game {
+  width: min(100vw, 177.78vh);
+  height: min(100vh, 56.25vw);
+  display: block;
+  background: #1a2b4a;
+  box-shadow: 0 0 60px rgba(255, 110, 60, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  image-rendering: auto;
+  cursor: crosshair;
+}
+#fallback {
+  display: none;
+  position: absolute;
+  color: #ffd9a0;
+  font-size: 15px;
+}

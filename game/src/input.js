@@ -1,58 +1,41 @@
-// Keyboard + mouse state, polled once per fixed step. Keys are tracked by
-// physical code so the layout does not matter, and every press is also
-// recorded as an edge (justPressed) for menu and action keys.
+// Keyboard + mouse state, with edge-triggered "pressed" events the game polls.
 export class Input {
   constructor(canvas) {
-    this.keys = new Set();
-    this.justPressed = new Set();
-    this.mouseX = 0;
-    this.mouseY = 0;
+    this.up = false; this.down = false; this.left = false; this.right = false;
+    this.run = false;
+    this.mouseX = 0; this.mouseY = 0;
     this.mouseDown = false;
-    this.mouseJustDown = false;
+    this.pressed = new Set();
     this.canvas = canvas;
-    this._onKeyDown = (e) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
-      if (!this.keys.has(e.code)) this.justPressed.add(e.code);
-      this.keys.add(e.code);
-    };
-    this._onKeyUp = (e) => { this.keys.delete(e.code); };
-    this._onMouseMove = (e) => {
+    this.anyKey = false;
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+      if (!e.repeat) this.pressed.add(e.key.toLowerCase());
+      this.anyKey = true;
+      this.setKey(e.key.toLowerCase(), true);
+    });
+    window.addEventListener('keyup', (e) => this.setKey(e.key.toLowerCase(), false));
+    window.addEventListener('blur', () => {
+      this.up = this.down = this.left = this.right = this.run = false;
+    });
+    canvas.addEventListener('mousemove', (e) => {
       const r = canvas.getBoundingClientRect();
       this.mouseX = (e.clientX - r.left) * (canvas.width / r.width);
       this.mouseY = (e.clientY - r.top) * (canvas.height / r.height);
-    };
-    this._onMouseDown = (e) => {
-      this._onMouseMove(e);
-      if (!this.mouseDown) this.mouseJustDown = true;
-      this.mouseDown = true;
-    };
-    this._onMouseUp = () => { this.mouseDown = false; };
-    this._onBlur = () => { this.keys.clear(); this.mouseDown = false; };
-    window.addEventListener('keydown', this._onKeyDown);
-    window.addEventListener('keyup', this._onKeyUp);
-    canvas.addEventListener('mousemove', this._onMouseMove);
-    canvas.addEventListener('mousedown', this._onMouseDown);
-    window.addEventListener('mouseup', this._onMouseUp);
-    window.addEventListener('blur', this._onBlur);
+    });
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0) { this.mouseDown = true; this.pressed.add('mouse0'); }
+    });
+    window.addEventListener('mouseup', () => { this.mouseDown = false; });
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }
-
-  down(...codes) { return codes.some((c) => this.keys.has(c)); }
-  pressed(...codes) { return codes.some((c) => this.justPressed.has(c)); }
-  pressedMouse() { return this.mouseJustDown; }
-
-  // Call at the end of each fixed step: edges live exactly one step.
-  endStep() {
-    this.justPressed.clear();
-    this.mouseJustDown = false;
+  setKey(k, v) {
+    if (k === 'w' || k === 'arrowup') this.up = v;
+    if (k === 's' || k === 'arrowdown') this.down = v;
+    if (k === 'a' || k === 'arrowleft') this.left = v;
+    if (k === 'd' || k === 'arrowright') this.right = v;
+    if (k === 'shift') this.run = v;
   }
-
-  moveVector() {
-    let x = 0, y = 0;
-    if (this.down('KeyA', 'ArrowLeft')) x -= 1;
-    if (this.down('KeyD', 'ArrowRight')) x += 1;
-    if (this.down('KeyW', 'ArrowUp')) y -= 1;
-    if (this.down('KeyS', 'ArrowDown')) y += 1;
-    if (x !== 0 && y !== 0) { x *= Math.SQRT1_2; y *= Math.SQRT1_2; }
-    return { x, y };
-  }
+  wasPressed(k) { return this.pressed.has(k.toLowerCase()); }
+  endFrame() { this.pressed.clear(); this.anyKey = false; }
 }

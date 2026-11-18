@@ -1,43 +1,22 @@
-// Save / load through localStorage. The save holds progression, not the
-// moment-to-moment world: traffic and police are always re-simulated fresh.
-import { SAVE_KEY } from './config.js';
+// Save / load through localStorage. Nothing leaves the browser.
+export const SAVE_KEY = 'solmar-vice-harbor-save-v1';
 
-export function saveGame(G) {
+export function writeSave(state) {
   try {
-    const data = {
-      version: 1,
-      cash: G.cash,
-      missionIndex: G.missionIndex,
-      missionsDone: G.missionsDone,
-      packages: G.packages,
-      stats: G.stats,
-      player: { x: G.player.x, y: G.player.y },
-      playSeconds: G.playSeconds,
-      savedAt: Date.now(),
-    };
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
     return true;
-  } catch (e) {
-    return false;
-  }
+  } catch (e) { return false; }
 }
-
-export function loadSave() {
+export function readSave() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    if (!data || data.version !== 1) return null;
+    if (!data || typeof data !== 'object') return null;
     return data;
-  } catch (e) {
-    return null;
-  }
+  } catch (e) { return null; }
 }
-
-export function hasSave() {
-  return loadSave() !== null;
-}
-
+export function hasSave() { return readSave() !== null; }
 export function clearSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* storage unavailable */ }
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
 }
