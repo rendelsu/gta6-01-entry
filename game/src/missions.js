@@ -1,291 +1,259 @@
-// Missions and story: Mara Voss, fresh out of Harbor lockup, owes the Ferrante
-// family $10,000. Rico Salas runs the jobs. Five missions, then free-roam fares.
-import { dist } from './utils.js';
+// Story missions and taxi fares for SOLMAR — Vice Harbor.
+// Mara Voss owes $10,000 to Donna Ferrante. Five missions pay the debt down.
+import { avenueX, streetY } from './city.js';
+import { dist } from './util.js';
 
-export const STORY = {
-  hero: 'Mara Voss',
-  fixer: 'Rico Salas',
-  creditor: 'Donna Ferrante',
-  debt: 10000,
-};
+export const DEBT_TOTAL = 10000;
 
-function L(name) { return name; }
+export function missionList() {
+  return [
+    {
+      id: 1, title: 'PESAN DONNA', giver: 'Donna Ferrante',
+      briefing: 'Donna Ferrante memanggilmu ke Club Neon. Utangmu $10.000 sudah jatuh tempo — dengarkan apa maunya, Mara.',
+      reward: 500,
+      steps: [
+        { kind: 'goto', label: 'Pergi ke Club Neon', x: avenueX(8) + 40, y: streetY(2) - 40, r: 70 },
+        { kind: 'talk', label: 'Bicara dengan Donna (tekan E)', x: avenueX(8) + 40, y: streetY(2) - 40, r: 60,
+          dialog: 'DONNA: "Mara. Sepuluh ribu. Kau punya seminggu. Kerja untukku — atau kolam marina yang bicara."', },
+      ],
+    },
+    {
+      id: 2, title: 'SETORAN PERTAMA', giver: 'Donna Ferrante',
+      briefing: 'Tiga toko di Vice Harbor "berutang" perlindungan ke Donna. Tagih setoran mereka dan antar ke Club Neon.',
+      reward: 1500,
+      steps: [
+        { kind: 'pickup', label: 'Tagih Tacos El Sol (E)', x: avenueX(5) + 40, y: streetY(4) - 40, r: 60, dialog: 'PEMILIK TAKO: "Ambil saja! Jangan rusak etalaseku lagi!"' },
+        { kind: 'pickup', label: 'Tagih Pawn Shop (E)', x: avenueX(7) + 40, y: streetY(5) - 40, r: 60, dialog: 'PEMILIK GADAI: "Ini semua yang ada. Sampaikan salamku ke Donna."' },
+        { kind: 'pickup', label: 'Tagih Donuts 24H (E)', x: avenueX(9) + 40, y: streetY(3) - 40, r: 60, dialog: 'KASIR: "Donat gratis juga? Baiklah... ambil uangnya."' },
+        { kind: 'goto', label: 'Antar setoran ke Club Neon', x: avenueX(8) + 40, y: streetY(2) - 40, r: 70 },
+      ],
+    },
+    {
+      id: 3, title: 'KABUR DARI VHPD', giver: 'Mara Voss',
+      briefing: 'Seseorang melaporkanmu. VHPD mengejarmu — hilang dari radar mereka dan sampai ke safehouse di Harbor Docks.',
+      reward: 2000,
+      steps: [
+        { kind: 'escape', label: 'Lepas dari kejaran polisi, lalu ke safehouse', x: avenueX(2) + 40, y: streetY(6) - 40, r: 80, wanted: 3, seconds: 25 },
+      ],
+    },
+    {
+      id: 4, title: 'MOBIL PESANAN', giver: 'Donna Ferrante',
+      briefing: 'Donna mau sports car oranye yang terparkir di Downtown. Curi, jangan sampai hancur, antar ke bengkel Auto Repair.',
+      reward: 2500,
+      steps: [
+        { kind: 'steal', label: 'Curi sports car oranye di Downtown', x: avenueX(7), y: streetY(1), r: 90, carType: 'sports', carColor: '#e67e22' },
+        { kind: 'deliver', label: 'Antar mobil ke Auto Repair (jangan rusak!)', x: avenueX(4) + 40, y: streetY(6) - 40, r: 80 },
+      ],
+    },
+    {
+      id: 5, title: 'LUNAS', giver: 'Donna Ferrante',
+      briefing: 'Setoran terakhir di dermaga Harbor Docks. Tapi penagih Donna yang lama tidak mau pensiun — hadapi mereka, lalu serahkan uangnya.',
+      reward: 3500,
+      steps: [
+        { kind: 'goto', label: 'Pergi ke dermaga Harbor Docks', x: avenueX(3) + 40, y: streetY(7) - 40, r: 80 },
+        { kind: 'fight', label: 'Hadapi penagih Donna (pukul / tembak)', x: avenueX(3) + 40, y: streetY(7) - 40, r: 120, enemies: 3 },
+        { kind: 'talk', label: 'Serahkan uang ke Donna (E)', x: avenueX(3) + 40, y: streetY(7) - 40, r: 60,
+          dialog: 'DONNA: "Lunas, Mara. Sepuluh ribu. Kau bekerja bagus — Vice Harbor ini milikmu sekarang."', },
+      ],
+    },
+  ];
+}
 
-export const MISSIONS = [
-  {
-    id: 'm1',
-    title: 'Homecoming',
-    reward: 400,
-    intro: [
-      'RICO: Mara! Out at last. Donna Ferrante still owns your debt — $10,000.',
-      'RICO: You drive for me now. First job: meet me at the garage. Walk or steal a ride.',
-    ],
-    steps: [
-      { type: 'goto', at: 'garage', radius: 90, text: 'Go to Rico\u2019s Garage', hint: 'Follow the yellow marker. Press E near a car to steal it.' },
-      { type: 'talk', at: 'garage', radius: 70, text: 'Talk to Rico (E)', hint: 'Rico has the first real job for you.' },
-      { type: 'goto', at: 'docks', radius: 90, text: 'Drive to the Old Port Docks', hint: 'A crate is waiting at the docks. Any car will do.' },
-      { type: 'pickup', at: 'docks', radius: 70, text: 'Pick up the crate (E)', hint: 'Grab it and bring it back to Rico.' },
-      { type: 'goto', at: 'garage', radius: 90, text: 'Deliver the crate to Rico', hint: 'Don\u2019t smash the car — Rico hates paperwork.' },
-    ],
-    outro: ['RICO: Clean run. $400. Donna\u2019s debt is down to $9,600. There is more where that came from.'],
-  },
-  {
-    id: 'm2',
-    title: 'Hot Wheels',
-    reward: 800,
-    intro: [
-      'RICO: A client wants a Comet GT — the red sports car parked by Solmar Plaza.',
-      'RICO: Take it. Quietly. Cops notice a stolen Comet real fast, so drive it straight back.',
-    ],
-    steps: [
-      { type: 'goto', at: 'plaza', radius: 110, text: 'Find the red Comet GT at Solmar Plaza', hint: 'The sports car is parked on the plaza\u2019s north side.' },
-      { type: 'steal', at: 'plaza', radius: 80, text: 'Steal the Comet GT (E)', hint: 'Get in and drive. The cops will be watching.' },
-      { type: 'goto', at: 'garage', radius: 100, text: 'Deliver the Comet to Rico\u2019s Garage', hint: 'One scratch and the client pays half. Keep it clean.' },
-    ],
-    outro: ['RICO: Beautiful. The client paid $800. Debt: $8,800. You drive like you mean it.'],
-  },
-  {
-    id: 'm3',
-    title: 'The Package',
-    reward: 1200,
-    intro: [
-      'RICO: Warehouse 9. A package, no questions. The VHPD has the docks staked out tonight.',
-      'RICO: Take the package to the Neon Strip. If the cops light you up — lose them, don\u2019t fight them.',
-    ],
-    steps: [
-      { type: 'goto', at: 'warehouse', radius: 100, text: 'Go to Warehouse 9', hint: 'The package is inside the yard.' },
-      { type: 'pickup', at: 'warehouse', radius: 70, text: 'Take the package (E)', hint: 'The moment you grab it, the cops will know.' },
-      { type: 'escape', at: 'strip', radius: 110, text: 'Deliver to the Neon Strip — lose the cops first', hint: 'Wanted level must be 0 when you arrive. Break line of sight and wait.' },
-    ],
-    outro: ['CLIENT: The package is safe. RICO: $1,200. Debt: $7,600. You are getting good at this.'],
-  },
-  {
-    id: 'm4',
-    title: 'Payback',
-    reward: 2000,
-    intro: [
-      'RICO: The Coral Kings jumped one of our couriers at the docks. They are still there, counting our money.',
-      'RICO: Go get it back. Fists won\u2019t cut it — grab the pistol from the garage stash first.',
-    ],
-    steps: [
-      { type: 'goto', at: 'garage', radius: 80, text: 'Pick up the pistol at the garage', hint: 'Press 2 to draw the pistol. Click to shoot.' },
-      { type: 'goto', at: 'docks', radius: 130, text: 'Go to the Old Port Docks', hint: 'Five Kings, all armed. Use the containers as cover.' },
-      { type: 'combat', at: 'docks', radius: 200, text: 'Clear out the Coral Kings (0/5)', hint: 'Watch your health. A wrecked car is not cover.' },
-      { type: 'pickup', at: 'docks', radius: 80, text: 'Recover the courier\u2019s cash (E)', hint: 'It is in the duffel by the containers.' },
-      { type: 'goto', at: 'garage', radius: 100, text: 'Bring the cash back to Rico', hint: 'Donna will be pleased. Pleased is good.' },
-    ],
-    outro: ['RICO: $2,000 recovered. Debt: $5,600. The Kings will think twice next time.'],
-  },
-  {
-    id: 'm5',
-    title: 'Harbor Lights',
-    reward: 5600,
-    intro: [
-      'DONNA FERRANTE: Mara. One last job and your debt is gone. My yacht is at the Vice Marina.',
-      'DONNA: The harbor patrol is paid to look the other way — the VHPD is not. Drive like the whole city is watching. It is.',
-    ],
-    steps: [
-      { type: 'goto', at: 'garage', radius: 90, text: 'Take Donna\u2019s black muscle car', hint: 'The Bandit is parked behind the garage. It is fast. Use it.' },
-      { type: 'steal', at: 'garage', radius: 80, text: 'Get in the Bandit (E)', hint: 'Three stars the moment you leave the garage. Hold on.' },
-      { type: 'escape', at: 'marina', radius: 120, text: 'Reach the Vice Marina — lose the cops first', hint: 'Break line of sight, then wait for the heat to die down.' },
-    ],
-    outro: [
-      'DONNA: The car is here. The debt is gone, Mara. You are free.',
-      'MARA: Free. First time in years. Vice Harbor is mine now — every street, every car, every sunset.',
-    ],
-  },
-];
+export function newMissionState() {
+  return {
+    index: 0,            // mission currently active (0-based)
+    step: 0,             // step inside the mission
+    active: false,
+    done: [],            // completed mission ids
+    debtPaid: 0,
+    dialog: null,        // { text, until } shown in the dialog box
+    escapeTimer: 0,
+    carrying: 0,         // cash collected this mission
+    targetCar: null,     // vehicle id for steal/deliver steps
+    enemies: [],         // spawned thugs for fight steps
+    startedAt: 0,
+  };
+}
 
-export class MissionManager {
-  constructor(game) {
-    this.game = game;
-    this.index = 0; // next mission to start
-    this.active = null; // {def, step, timer}
-    this.marker = null; // {x, y, label}
-    this.sideJob = null;
-    this.completedCount = 0;
-    this.storyDone = false;
+export function currentMission(ms) {
+  const list = missionList();
+  if (ms.index >= list.length) return null;
+  return list[ms.index];
+}
+export function currentStep(ms) {
+  const m = currentMission(ms);
+  if (!m) return null;
+  return m.steps[ms.step] || null;
+}
+export function missionObjectiveText(ms) {
+  const m = currentMission(ms);
+  if (!m) return 'UTANG LUNAS — Vice Harbor milikmu, Mara.';
+  if (!ms.active) return 'Tekan M untuk memulai misi: ' + m.title;
+  const s = currentStep(ms);
+  if (!s) return m.title + ' — selesai!';
+  return m.title + ' — ' + s.label;
+}
+
+// Start the next mission. Returns the briefing text.
+export function startMission(state) {
+  const ms = state.missions;
+  const m = currentMission(ms);
+  if (!m || ms.active) return null;
+  ms.active = true;
+  ms.step = 0;
+  ms.carrying = 0;
+  ms.escapeTimer = 0;
+  ms.startedAt = state.time;
+  const step = m.steps[0];
+  if (step && step.kind === 'escape' && step.wanted) {
+    state.wanted = Math.max(state.wanted, step.wanted);
+    ensurePolice(state);
   }
-  currentDef() { return MISSIONS[this.index] || null; }
-  startMission(i) {
-    const def = MISSIONS[i];
-    if (!def) return false;
-    this.active = { def, step: 0, startedAt: this.game.time };
-    this.game.dialogue(def.intro);
-    this.updateMarker();
-    this.game.sound.pickup();
-    return true;
+  if (step && step.kind === 'steal') spawnTargetCar(state, step);
+  if (step && step.kind === 'fight') spawnEnemies(state, step);
+  showDialog(state, m.giver + ': ' + m.briefing);
+  return m.briefing;
+}
+
+export function ensurePolice(state) {
+  const want = Math.min(2 + state.wanted, 6);
+  while (state.police.length < want) {
+    const { spawnPolice } = state.__entities;
+    state.police.push(spawnPolice(state));
   }
-  updateMarker() {
-    if (!this.active) { this.marker = null; return; }
-    const step = this.active.def.steps[this.active.step];
-    if (!step) { this.marker = null; return; }
-    const lm = this.game.city.landmarks[step.at];
-    this.marker = { x: lm.x, y: lm.y, label: lm.name, step };
+}
+
+export function spawnTargetCar(state, step) {
+  const { makeVehicle } = state.__entities;
+  const car = makeVehicle(step.carType || 'sports', step.x, step.y, 0, { parked: true, color: step.carColor });
+  state.traffic.push(car);
+  state.missions.targetCar = car.id;
+}
+
+export function spawnEnemies(state, step) {
+  const { makePed } = state.__entities;
+  state.missions.enemies = [];
+  for (let i = 0; i < (step.enemies || 2); i++) {
+    const e = makePed(step.x + (i - 1) * 90, step.y + 60);
+    e.thug = true;
+    e.health = 3;
+    e.shirt = '#222222';
+    state.peds.push(e);
+    state.missions.enemies.push(e.id);
   }
-  objectiveText() {
-    if (this.active) {
-      const step = this.active.def.steps[this.active.step];
-      let text = step.text;
-      if (step.type === 'combat') {
-        const left = this.game.combat.rivalsAlive();
-        const total = 5;
-        text = 'Clear out the Coral Kings (' + (total - left) + '/' + total + ')';
-      }
-      return this.active.def.title + ' — ' + text;
-    }
-    if (this.storyDone) return 'Free roam — press T for a fare job. Debt paid in full.';
-    const next = this.currentDef();
-    if (next) return 'Next job: ' + next.title + ' — go to the yellow marker to start';
-    return '';
+}
+
+export function showDialog(state, text, seconds = 6) {
+  state.missions.dialog = { text, until: state.time + seconds };
+}
+
+export function advanceStep(state) {
+  const ms = state.missions;
+  const m = currentMission(ms);
+  if (!m) return;
+  ms.step++;
+  if (ms.step >= m.steps.length) {
+    // Mission complete.
+    ms.done.push(m.id);
+    ms.debtPaid += m.reward;
+    state.cash += m.reward;
+    ms.active = false;
+    ms.index++;
+    showDialog(state, 'MISI SELESAI: ' + m.title + ' — dibayar $' + m.reward + '. Utang terbayar: $' + ms.debtPaid + ' / $' + DEBT_TOTAL, 7);
+    state.saveGame();
+    if (state.audio) state.audio.win();
+    return;
   }
-  // Called when the player presses E (interact).
-  interact() {
-    const g = this.game;
-    const p = g.player;
-    const px = p.onFoot ? p.x : p.car ? p.car.x : p.x;
-    const py = p.onFoot ? p.y : p.car ? p.car.y : p.y;
-    // Start a mission by touching its start marker on foot.
-    if (!this.active && !this.storyDone) {
-      const def = this.currentDef();
-      if (def) {
-        const lm = g.city.landmarks[def.steps[0].at];
-        if (dist(px, py, lm.x, lm.y) < 130) {
-          this.startMission(this.index);
-          return true;
-        }
-      }
-    }
-    if (!this.active) return false;
-    const step = this.active.def.steps[this.active.step];
-    const lm = g.city.landmarks[step.at];
-    if (dist(px, py, lm.x, lm.y) > step.radius + 40) return false;
-    if (step.type === 'talk' || step.type === 'pickup') {
-      this.advance();
-      return true;
-    }
-    if (step.type === 'steal') {
-      // stealing is handled by the car-enter code; reaching the marker is enough
-      return false;
-    }
-    return false;
+  const step = m.steps[ms.step];
+  if (step.kind === 'escape' && step.wanted) {
+    state.wanted = Math.max(state.wanted, step.wanted);
+    ensurePolice(state);
   }
-  advance() {
-    const g = this.game;
-    const m = this.active;
-    m.step++;
-    g.sound.pickup();
-    if (m.step >= m.def.steps.length) {
-      this.completeMission();
-      return;
+  if (step.kind === 'steal') spawnTargetCar(state, step);
+  if (step.kind === 'fight') spawnEnemies(state, step);
+  if (step.dialog) showDialog(state, step.dialog);
+}
+
+// Called every frame while a mission is active.
+export function updateMissions(state, dt) {
+  const ms = state.missions;
+  if (!ms.active) return;
+  const m = currentMission(ms);
+  const step = currentStep(ms);
+  if (!m || !step) return;
+  const p = state.player;
+  const px = state.playerCar ? state.playerCar.x : p.x;
+  const py = state.playerCar ? state.playerCar.y : p.y;
+  const d = dist(px, py, step.x, step.y);
+  if (step.kind === 'goto' || step.kind === 'deliver') {
+    if (d < step.r) advanceStep(state);
+  } else if (step.kind === 'escape') {
+    ms.escapeTimer += dt;
+    if (state.wanted === 0 && ms.escapeTimer > (step.seconds || 20)) {
+      advanceStep(state);
+    } else if (d < step.r && state.wanted === 0) {
+      advanceStep(state);
     }
-    const step = m.def.steps[m.step];
-    g.toast(step.hint || step.text);
-    if (step.type === 'combat') {
-      const lm = g.city.landmarks[step.at];
-      g.combat.spawnRivals(lm.x, lm.y, 5, 60);
-      g.toast('The Coral Kings are here — fight!');
-    }
-    if (m.def.id === 'm4' && m.step === 0) {
-      g.player.weapon = 'pistol';
-      g.player.ammo = 24;
-      g.toast('Pistol picked up — press 2 to draw it');
-    }
-    if (m.def.id === 'm3' && m.step === 2) {
-      g.police.addWanted(2);
-    }
-    if (m.def.id === 'm5' && m.step === 1) {
-      g.police.addWanted(3);
-      // park the Bandit behind the garage for the player to take
-      g.spawnMissionCar('muscle', g.city.landmarks.garage.x + 60, g.city.landmarks.garage.y + 40, '#1a1a1a');
-    }
-    this.updateMarker();
+  } else if (step.kind === 'steal') {
+    const car = state.traffic.find((v) => v.id === ms.targetCar);
+    if (car && state.playerCar === car) advanceStep(state);
+  } else if (step.kind === 'fight') {
+    const alive = ms.enemies.filter((id) => {
+      const e = state.peds.find((x) => x.id === id);
+      return e && !e.dead;
+    });
+    if (alive.length === 0) advanceStep(state);
   }
-  completeMission() {
-    const g = this.game;
-    const def = this.active.def;
-    g.player.cash += def.reward;
-    this.completedCount++;
-    this.index++;
-    g.sound.missionDone();
-    g.sound.cash();
-    g.particles.addText(g.player.x, g.player.y - 40, '+' + '$' + def.reward, '#7dff8a');
-    g.dialogue(def.outro);
-    g.toast('Mission complete: ' + def.title + '  +$' + def.reward);
-    g.flashBanner('MISSION COMPLETE', def.title + '   +$' + def.reward);
-    if (this.index >= MISSIONS.length) {
-      this.storyDone = true;
-      g.flashBanner('DEBT PAID', 'Mara Voss is free — Vice Harbor is yours');
-      g.saveGame();
-    }
-    this.active = null;
-    this.marker = null;
-    g.saveGame();
-  }
-  update(dt) {
-    const g = this.game;
-    if (!this.active) return;
-    const m = this.active;
-    const step = m.def.steps[m.step];
-    if (!step) return;
-    const p = g.player;
-    const px = p.onFoot ? p.x : p.car ? p.car.x : p.x;
-    const py = p.onFoot ? p.y : p.car ? p.car.y : p.y;
-    const lm = g.city.landmarks[step.at];
-    const d = dist(px, py, lm.x, lm.y);
-    if (step.type === 'goto' && d < step.radius) {
-      this.advance();
-      return;
-    }
-    if (step.type === 'escape' && d < step.radius && g.police.wanted === 0) {
-      this.advance();
-      return;
-    }
-    if (step.type === 'combat' && g.combat.rivalsAlive() === 0) {
-      this.advance();
-      return;
-    }
-    if (step.type === 'steal') {
-      // complete once the player is driving any car near the marker
-      if (!p.onFoot && d < step.radius + 60) {
-        this.advance();
-        return;
+  // talk / pickup steps complete on E — handled by tryInteract().
+}
+
+// E key: interact with the current mission step, a car, or a taxi passenger.
+export function tryInteract(state) {
+  const ms = state.missions;
+  const p = state.player;
+  const px = state.playerCar ? state.playerCar.x : p.x;
+  const py = state.playerCar ? state.playerCar.y : p.y;
+  if (ms.active) {
+    const step = currentStep(ms);
+    if (step && (step.kind === 'talk' || step.kind === 'pickup')) {
+      if (dist(px, py, step.x, step.y) < step.r + 30) {
+        if (step.kind === 'pickup') { ms.carrying += 400; state.cash += 400; if (state.audio) state.audio.cash(); }
+        if (step.dialog) showDialog(state, step.dialog);
+        advanceStep(state);
+        return true;
       }
     }
   }
-  // Side fare jobs after the story: pick up a passenger, drop them off.
-  startSideJob() {
-    const g = this.game;
-    if (this.active || !this.storyDone) return;
-    const spots = ['plaza', 'strip', 'beach', 'hospital', 'marina', 'docks'];
-    const a = spots[Math.floor(Math.random() * spots.length)];
-    let b = spots[Math.floor(Math.random() * spots.length)];
-    if (b === a) b = 'strip';
-    const pa = g.city.landmarks[a], pb = g.city.landmarks[b];
-    this.sideJob = { from: pa, to: pb, phase: 'pickup', fare: 120 + Math.floor(Math.random() * 180) };
-    this.marker = { x: pa.x, y: pa.y, label: pa.name, step: { text: 'Pick up the fare at ' + pa.name } };
-    g.toast('Fare job: pick up a passenger at ' + pa.name);
+  return false;
+}
+
+// --- Taxi fares ---------------------------------------------------------------
+export function newTaxiState() {
+  return { passenger: null, dest: null, fare: 0, timer: 0 };
+}
+
+export function updateTaxi(state, dt) {
+  const t = state.taxi;
+  const car = state.playerCar;
+  if (!car || car.type !== 'taxi') { t.passenger = null; t.dest = null; return; }
+  t.timer += dt;
+  if (!t.passenger && t.timer > 6) {
+    t.timer = 0;
+    // A pedestrian nearby hails the taxi.
+    const near = state.peds.find((ped) => !ped.dead && dist(ped.x, ped.y, car.x, car.y) < 320);
+    if (near) {
+      t.passenger = { x: near.x, y: near.y };
+      t.dest = { x: avenueX(1 + Math.floor(Math.random() * 10)), y: streetY(1 + Math.floor(Math.random() * 7)) };
+      t.fare = 60 + Math.floor(dist(car.x, car.y, t.dest.x, t.dest.y) / 40);
+      showDialog(state, 'PENUMPANG: "Antar aku ke penanda kuning — $' + t.fare + ' untukmu."', 5);
+    }
   }
-  updateSideJob(dt) {
-    const g = this.game;
-    if (!this.sideJob) return;
-    const p = g.player;
-    const px = p.onFoot ? p.x : p.car ? p.car.x : p.x;
-    const py = p.onFoot ? p.y : p.car ? p.car.y : p.y;
-    const target = this.sideJob.phase === 'pickup' ? this.sideJob.from : this.sideJob.to;
-    if (dist(px, py, target.x, target.y) < 90) {
-      if (this.sideJob.phase === 'pickup') {
-        this.sideJob.phase = 'dropoff';
-        this.marker = { x: this.sideJob.to.x, y: this.sideJob.to.y, label: this.sideJob.to.name, step: { text: 'Drop off at ' + this.sideJob.to.name } };
-        g.toast('Passenger aboard — drop them at ' + this.sideJob.to.name);
-      } else {
-        g.player.cash += this.sideJob.fare;
-        g.sound.cash();
-        g.flashBanner('FARE COMPLETE', '+' + '$' + this.sideJob.fare);
-        g.saveGame();
-        this.sideJob = null;
-        this.marker = null;
-      }
+  if (t.passenger && !t.destReached) {
+    if (dist(car.x, car.y, t.dest.x, t.dest.y) < 70) {
+      state.cash += t.fare;
+      showDialog(state, 'FARE DIBAYAR: +$' + t.fare, 4);
+      if (state.audio) state.audio.cash();
+      t.passenger = null; t.dest = null; t.timer = 0;
     }
   }
 }

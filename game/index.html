@@ -3,15 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SOLMAR — Vice Harbor</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="./style.css">
+<title>SOLMAR — Vice Harbor</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0b0e14; height: 100%; overflow: hidden; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; background: #1a2b3c; image-rendering: auto; }
+  #hint {
+    position: fixed; left: 10px; bottom: 8px; color: rgba(255,255,255,.55);
+    font: 12px/1.4 system-ui, sans-serif; pointer-events: none; text-shadow: 0 1px 2px #000;
+  }
+</style>
 </head>
 <body>
-<div id="wrap">
-  <canvas id="game" width="1280" height="720"></canvas>
-  <div id="fallback">SOLMAR — Vice Harbor needs JavaScript and a desktop browser.</div>
-</div>
+<div id="wrap"><canvas id="game" width="1280" height="720"></canvas></div>
+<div id="hint">SOLMAR — Vice Harbor &middot; WASD move / drive &middot; E enter car &middot; Space punch &middot; Click shoot &middot; M mission &middot; P pause &middot; H help</div>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
