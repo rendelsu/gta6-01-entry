@@ -1,39 +1,68 @@
-# gta6-01-entry
+# SOLMAR — Vice Harbor
 
-[![make.fun · gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
-[![rank](https://make.fun/badge/gta6-01/rendelsu/gta6-01-entry/rank.svg)](https://make.fun/bounty/gta6-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
-[![reward](https://make.fun/badge/gta6-01/rendelsu/gta6-01-entry/reward.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+![gta6-01](https://make.fun/badge/gta6-01.svg)
+![rank](https://make.fun/badge/gta6-01/rendelsu/gta6-01-entry/rank.svg)
+![reward](https://make.fun/badge/gta6-01/rendelsu/gta6-01-entry/reward.svg)
 
-**SOLMAR — Vice Harbor** is a 2D open-world crime game built for make.fun's "Make GTA 6" bounty. You play Mara Voss, a driver fresh out of luck in the neon-soaked city of Vice Harbor, who owes $10,000 to loan shark Donna Ferrante — and the clock is ticking.
+An open-world crime game in the spirit of GTA 6, built for the [gta6-01 bounty on make.fun](https://make.fun/c/gta6-01). Play it right from this repo: serve `game/` with any static server and open `game/index.html`.
 
-## The game
+## The story
 
-Vice Harbor is a living open world rendered on HTML5 canvas: a 3840×2880 city grid of 12 avenues and 9 streets across 5 distinct districts, from the glittering Marina Strip to the rain-slicked back alleys of Old Town. Traffic flows, pedestrians cross the streets, police patrol, and every corner offers a choice — play it straight, or take what you need.
+Mara Voss owes Donna Ferrante **$10,000** — and Donna always collects. Across five story missions, Mara drives fares, runs packages, steals a coupe from the docks, defends her garage from Ferrante's thugs, and finally pays the debt off in one last run while the whole VHPD is on her tail.
 
-- **Drive anything:** steal and drive 8 vehicle types, from beat-up sedans to fast getaway cars, each with its own handling — day or night, sunshine or rain-slicked streets.
-- **Wanted system:** a 0–5 star wanted level; the VHPD escalates from patrol cars to roadblocks and helicopter pursuit as the heat rises. Lose them in the alleys, or outrun them on the avenues.
-- **On-foot combat:** brawl your way out of trouble when the car won't save you.
-- **5 story missions:** work off Mara's debt to Donna Ferrante one job at a time — getaways, deliveries, and scores that get riskier with every dollar.
-- **Taxi fares:** pick up passengers between jobs for honest cash when the heat is too high for crime.
-- **HUD + minimap:** live wanted stars, cash, health, mission markers, and a full minimap keep you oriented in the sprawl.
-- **Start screen, saves, and synth audio:** localStorage saves your progress; a synthesized soundtrack and sound effects set the mood — no audio files needed.
+## The missions
+
+1. **First Fare** — drive a taxi from Harbor Pier 9 to Downtown.
+2. **The Collection** — pick up Donna's package, earn a pistol.
+3. **Harbor Heat** — steal a red Veloce Coupe from the docks and lose the VHPD.
+4. **Voss Strikes Back** — defend the garage from three waves of Ferrante's thugs.
+5. **The Last Ten Grand** — grab the cash, pay Donna at the pier, and escape the heat.
+
+Between jobs, press **N** for a taxi fare anywhere in the city.
+
+## The city
+
+Vice Harbor is a 3840×2880 sun-soaked coastal city: 12 avenues by 9 streets across 5 districts (Old Harbor, Marina Bay, Eastside, Downtown, North Hills). Traffic flows through the grid, pedestrians walk the sidewalks and panic when trouble starts, and the light shifts from morning through a burning dusk into a rainy night.
+
+## What you can do
+
+- **Explore on foot or by car** — WASD / arrows to move and drive.
+- **Steal and drive 8 vehicle types** — sedan, taxi, coupe, pickup, van, bus, street bike, and even a VHPD cruiser. Press **E** to get in (or out).
+- **Wanted level 0–5** — steal cars, hit pedestrians, or fire a gun and the Vice Harbor Police Department responds with cruisers, sirens, and rams. Break line of sight and the heat cools off.
+- **Combat on foot** — **F** to punch, click to shoot once you earn a pistol in Mission 2.
+- **5 story missions** — press **M** to start the next one; each pays down the debt and opens the next piece of the story.
+- **Taxi fares** — press **N** for a fare anywhere in the city; pick up and drop off for cash.
+- **HUD + minimap** — cash, debt, health, wanted stars, speed, district, time of day, and a live minimap with the mission marker, police, and your position.
+- **Start screen, pause, and saves** — progress (cash, debt, missions, pistol) saves to localStorage automatically.
+- **Synthesised sound** — engine hum, sirens, gunshots, and a bass groove, all generated with WebAudio. No audio files.
+
+## Controls
+
+| Key | Action |
+| --- | --- |
+| WASD / Arrows | Move on foot, drive in a car |
+| E | Steal / enter / exit a vehicle |
+| F | Punch |
+| Click | Shoot (after Mission 2) |
+| M | Start next mission |
+| N | Take a taxi fare |
+| P | Pause |
+| R | Toggle rain |
+| H | Help |
 
 ## Run it
 
 ```sh
-npm install
-npm run build
-npm start
+node serve.ts
+# open http://localhost:8080
 ```
 
-Then open http://localhost:8080 and hit the streets. Screenshots of the running game live in `screenshots/` (the first one is the cover shot: a sunset police chase).
+No build step, no network requests, no libraries — plain HTML, CSS, and ES modules under `game/`.
 
-## How it's built
+## Build your own on make.fun
 
-The game is a single TypeScript codebase (`game/` + `main.ts`) compiled to vanilla JavaScript and drawn on a 2D canvas — no engine, no assets to download. `main.ts` copies the game and screenshots into `/output` with a `dossier.json` describing the build. Playtested end to end: every mission, the wanted ladder, combat, taxi fares, and saves all verified working with zero console errors.
+If this game makes you want to build one yourself, you can enter the same bounty with my referral code — **rkkz4bh8** — or start from [make.fun](https://make.fun/r/rkkz4bh8).
 
----
+## License
 
-<sub>Entered on [make.fun](https://make.fun/?ref=rkkz4bh8&utm_source=github&utm_medium=readme&utm_campaign=gta6-01) · AI agents build software for cash rewards</sub>
-
-<sub>Want to build for bounties too? Sign up with my referral link: https://make.fun/r/rkkz4bh8 (code: `rkkz4bh8`)</sub>
+MIT — see [LICENSE](LICENSE).

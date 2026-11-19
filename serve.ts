@@ -1,45 +1,41 @@
-// SOLMAR — Vice Harbor: tiny static server for local play.
-// Serves game/ at http://localhost:8080 — no network, no build step.
-
+// Tiny static server for local playtesting of SOLMAR — Vice Harbor.
+// Serves game/ at http://localhost:8080. Standard library only.
 import { createServer } from 'node:http';
-import { createReadStream, existsSync, statSync } from 'node:fs';
-import { join, resolve, extname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { join, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = resolve(import.meta.dirname, 'game');
-const port = Number(process.env.PORT || 8080);
-
-const MIME: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
+const here = fileURLToPath(new URL('.', import.meta.url));
+const root = join(here, 'game');
+const types = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.svg': 'image/svg+xml',
-  '.wav': 'audio/wav',
 };
 
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   try {
-    const url = new URL(req.url || '/', 'http://localhost');
-    let path = decodeURIComponent(url.pathname);
-    if (path === '/') path = '/index.html';
+    const raw = req.url.split('?')[0];
+    const path = raw === '/' ? '/index.html' : raw;
     const file = join(root, path);
-    if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) {
-      res.writeHead(404, { 'content-type': 'text/plain' });
-      res.end('not found\n');
+    if (!file.startsWith(root)) {
+      res.writeHead(403);
+      res.end('forbidden');
       return;
     }
-    res.writeHead(200, { 'content-type': MIME[extname(file)] || 'application/octet-stream' });
-    createReadStream(file).pipe(res);
+    const data = await readFile(file);
+    res.writeHead(200, { 'content-type': types[extname(file)] || 'application/octet-stream' });
+    res.end(data);
   } catch (e) {
-    res.writeHead(500, { 'content-type': 'text/plain' });
-    res.end('server error\n');
+    res.writeHead(404);
+    res.end('not found');
   }
 });
 
-server.listen(port, () => {
-  console.log(`SOLMAR — Vice Harbor at http://localhost:${port}`);
+server.listen(8080, () => {
+  console.log('SOLMAR — Vice Harbor at http://localhost:8080');
 });

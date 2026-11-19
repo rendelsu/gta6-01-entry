@@ -1,125 +1,173 @@
-// SOLMAR — Vice Harbor: boot, input and the main loop.
+// Boot + frame loop. Also drives the four screenshot scenes through
+// ?shot=cover|mission|night|walk, so the maker can capture the game
+// exactly as it plays, with no staging outside the game itself.
+import { createGame, update, deriveDisplay, handleKey, startPlay } from './game.js';
+import { drawWorld, drawHUD, drawStartScreen, drawPause, drawGameOver, VIEW_W, VIEW_H } from './render.js';
+import { avenueX, streetY } from './city.js';
+import { makeVehicle, spawnPolice } from './entities.js';
+import { startMission, currentStep } from './missions.js';
 
-(function () {
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const state = newGameState();
-  const keys = {};
-  let W = 1280, H = 720;
-  let lastT = 0;
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const state = createGame();
 
-  window.__solmar = state; // exposed for playtesting and screenshots
-
-  function resize() {
-    W = window.innerWidth; H = window.innerHeight;
-    canvas.width = W; canvas.height = H;
-  }
-  window.addEventListener('resize', resize);
-  resize();
-
-  buildCity();
-  state.saveExists = loadSave(state);
-
-  // Parked cars scattered through the city, ready to steal.
-  for (let i = 0; i < 14; i++) {
-    const p = randomRoadPoint();
-    const type = pickVehicleType(true);
-    const car = makeCar(p.x, p.y, chance(0.5) ? 0 : Math.PI / 2, type, { driver: chance(0.5) });
-    state.parked.push(car);
-  }
-  for (let i = 0; i < 26; i++) spawnTrafficCar(state);
-  for (let i = 0; i < 30; i++) state.peds.push(spawnPed(state));
-
-  // Screenshot presets: ?shot=1..4 stages a real gameplay state.
-  const params = new URLSearchParams(window.location.search);
-  const shot = parseInt(params.get('shot') || '0', 10);
-  if (shot >= 1 && shot <= 4) applyShotPreset(state, shot);
-
-  const KEYMAP = {
-    KeyW: 'w', ArrowUp: 'up', KeyA: 'a', ArrowLeft: 'left',
-    KeyS: 's', ArrowDown: 'down', KeyD: 'd', ArrowRight: 'right',
-    ShiftLeft: 'shift', ShiftRight: 'shift', Space: 'space',
-  };
-
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') e.preventDefault();
-    const k = KEYMAP[e.code];
-    if (k) keys[k] = true;
-    if (e.repeat) return;
-    AudioSys.init(); AudioSys.resume();
-    if (e.code === 'Enter' && !state.started) {
-      state.started = true;
-      if (!state.saveExists) startMission(state, 0);
-      else state.dialog = { speaker: 'MARA VOSS', text: 'Mara: "Welcome back. The debt is still ' + fmtMoney(Math.max(0, DEBT_TOTAL - state.debtPaid)) + '. Press M when you are ready for the next job."', mission: '', open: true };
-    } else if (e.code === 'KeyM') {
-      if (state.started && !state.missionActive && !state.storyDone) startMission(state, state.missionIndex);
-    } else if (e.code === 'KeyE') {
-      if (!state.started) return;
-      if (state.dialog && state.dialog.open) { state.dialog.open = false; return; }
-      if (state.player.car) exitCar(state);
-      else {
-        const car = nearestCar(state, state.player.x, state.player.y, 70);
-        if (car) enterCar(state, car);
+function setupShot(mode) {
+  const s = state;
+  const pl = s.player;
+  s.screen = 'play';
+  s.ms.dialog = null;
+  if (mode === 'cover') {
+    // Dusk chase: wanted 3, police behind, traffic and pedestrians around,
+    // mission marker ahead on the HUD.
+    s.hour = 17.8;
+    s.rain = 0;
+    pl.x = avenueX(5);
+    pl.y = streetY(4);
+    pl.angle = 0;
+    const coupe = makeVehicle('coupe', pl.x, pl.y, 0, s.rng);
+    coupe.speed = 200;
+    pl.inCar = coupe;
+    s.keys.w = true; // hold the gas so the chase stays fast for the shot
+    s.wanted = 3;
+    s.police = spawnPolice(3, pl.x, pl.y, s.rng);
+    s.ms.index = 0;
+    startMission(s.ms, s.missions, null);
+    s.ms.dialog = null;
+    // A loose pack of traffic around the player: some ahead on the avenue,
+    // some crossing on the street, all moving.
+    s.traffic.forEach((c, i) => {
+      if (i >= 10) return;
+      if (i % 2 === 0) {
+        c.x = avenueX(5) + (i % 4 < 2 ? -14 : 14);
+        c.y = pl.y - 420 + i * 110;
+        c.angle = i % 4 < 2 ? Math.PI / 2 : -Math.PI / 2;
+      } else {
+        c.x = pl.x - 380 + i * 95;
+        c.y = streetY(4) + (i % 4 < 2 ? -14 : 14);
+        c.angle = 0;
       }
-    } else if (e.code === 'KeyF') {
-      if (state.started && !state.player.car) punch(state);
-    } else if (e.code === 'KeyT') {
-      if (state.started && state.player.car && state.player.car.type.id === 'taxi' && !state.fare && !state.missionActive) startFare(state);
-    } else if (e.code === 'KeyR') {
-      if (state.wasted) {
-        state.wasted = false;
-        state.player.hp = 100;
-        state.wanted = 0;
-        state.police = [];
-        state.player.x = 1760; state.player.y = 1760;
-        if (state.player.car) { state.player.car = null; }
-      }
-    } else if (e.code === 'KeyU') {
-      AudioSys.toggleMute();
-    }
-  });
-  window.addEventListener('keyup', (e) => {
-    const k = KEYMAP[e.code];
-    if (k) keys[k] = false;
-  });
-  canvas.addEventListener('mousedown', () => { AudioSys.init(); AudioSys.resume(); });
-
-  window.addEventListener('error', (e) => { state.errors++; });
-
-  function frame(t) {
-    requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
-    lastT = t;
-    if (state.started && !state.wasted) updateGame(state, keys, dt);
-    // Camera: follow the player, shaken by crashes and punches.
-    const px = state.player.car ? state.player.car.x : state.player.x;
-    const py = state.player.car ? state.player.car.y : state.player.y;
-    const shakeX = state.shake > 0 ? rand(-state.shake, state.shake) : 0;
-    const shakeY = state.shake > 0 ? rand(-state.shake, state.shake) : 0;
-    const camX = clamp(px - W / 2 + shakeX, -60, CITY_W - W + 60);
-    const camY = clamp(py - H / 2 + shakeY, -60, CITY_H - H + 60);
-    state.camX = camX; state.camY = camY;
-    ctx.save();
-    ctx.clearRect(0, 0, W, H);
-    const cam = { x: camX, y: camY, w: W, h: H };
-    if (state.started) {
-      ctx.translate(-camX, -camY);
-      Render.drawWorld(ctx, state, cam);
-      for (const car of state.parked) Render.drawCar(ctx, car, t / 1000);
-      for (const car of state.traffic) Render.drawCar(ctx, car, t / 1000);
-      for (const car of state.police) Render.drawCar(ctx, car, t / 1000);
-      for (const ped of state.peds) Render.drawPed(ctx, ped, t / 1000);
-      if (state.player.car) Render.drawCar(ctx, state.player.car, t / 1000);
-      Render.drawPlayer(ctx, state, t / 1000);
-      Render.drawLighting(ctx, state, cam);
-      ctx.restore();
-      Render.drawHUD(ctx, state, W, H);
-      Render.drawDialog(ctx, state, W, H);
-      if (state.wasted) Render.drawWasted(ctx, W, H);
-    } else {
-      ctx.restore();
-      Render.drawStart(ctx, state, W, H);
-    }
+      c.speed = 140 + (i % 3) * 20;
+      c.targetSpeed = c.speed;
+    });
+  } else if (mode === 'mission') {
+    // Mission 4 briefing on screen, thugs closing in on the garage.
+    s.hour = 15.2;
+    s.rain = 0;
+    pl.x = avenueX(5);
+    pl.y = streetY(4) + 120;
+    pl.angle = -Math.PI / 2;
+    pl.hasGun = true;
+    s.ms.index = 3;
+    startMission(s.ms, s.missions, null);
+    s.thugs = [
+      { kind: 'thug', x: pl.x - 95, y: pl.y - 115, angle: 0, speed: 0, health: 60, shootT: 99, color: '#3a2a2a', walkPhase: 0 },
+      { kind: 'thug', x: pl.x + 115, y: pl.y - 85, angle: 0, speed: 0, health: 60, shootT: 99, color: '#3a2a2a', walkPhase: 0 },
+      { kind: 'thug', x: pl.x + 35, y: pl.y - 175, angle: 0, speed: 0, health: 60, shootT: 99, color: '#3a2a2a', walkPhase: 0 },
+    ];
+    s.ms.combatLeft = 3;
+    s.ms.combatWave = 1;
+  } else if (mode === 'night') {
+    // Night drive in the rain: headlights, traffic, wet streets.
+    s.hour = 22.4;
+    s.rain = 1;
+    pl.x = avenueX(6);
+    pl.y = streetY(5);
+    pl.angle = Math.PI / 2;
+    const taxi = makeVehicle('taxi', pl.x, pl.y, Math.PI / 2, s.rng);
+    taxi.speed = 210;
+    pl.inCar = taxi;
+    s.keys.w = true; // hold the gas so the night drive stays fast
+    s.wanted = 0;
+    s.ms.index = 1;
+    startMission(s.ms, s.missions, null);
+    s.ms.dialog = null;
+    s.traffic.forEach((c, i) => {
+      c.x = avenueX(6) + (i % 2 === 0 ? -14 : 14);
+      c.y = pl.y - 260 + i * 90;
+      c.angle = Math.PI / 2;
+      c.speed = 140;
+    });
+  } else if (mode === 'walk') {
+    // On foot downtown at midday: pedestrians, shopfronts, wanted 2.
+    s.hour = 11.0;
+    s.rain = 0;
+    pl.x = avenueX(6);
+    pl.y = streetY(3) + 60;
+    pl.angle = Math.PI / 2;
+    pl.hasGun = true;
+    s.wanted = 2;
+    s.police = spawnPolice(2, pl.x, pl.y, s.rng);
+    s.ms.index = 2;
+    startMission(s.ms, s.missions, null);
+    s.ms.dialog = null;
+    s.peds.forEach((p, i) => {
+      p.x = pl.x - 200 + (i % 8) * 55;
+      p.y = pl.y - 120 + Math.floor(i / 8) * 70;
+    });
   }
+  s.camera.x = Math.max(0, Math.min(3840 - VIEW_W, pl.x - VIEW_W / 2));
+  s.camera.y = Math.max(0, Math.min(2880 - VIEW_H, pl.y - VIEW_H / 2));
+}
+
+const params = new URLSearchParams(location.search);
+const shot = params.get('shot');
+if (shot) {
+  state.shotMode = shot;
+  // Screenshots show the bare canvas at exactly 1280x720.
+  document.getElementById('bar').style.display = 'none';
+  canvas.style.width = '1280px';
+  canvas.style.height = '720px';
+  setupShot(shot);
+}
+
+window.addEventListener('keydown', (e) => {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+  handleKey(state, e.code, true);
+});
+window.addEventListener('keyup', (e) => handleKey(state, e.code, false));
+canvas.addEventListener('mousedown', (e) => {
+  const r = canvas.getBoundingClientRect();
+  state.mouse.x = (e.clientX - r.left) * (VIEW_W / r.width);
+  state.mouse.y = (e.clientY - r.top) * (VIEW_H / r.height);
+  state.mouse.down = true;
+  state.audio.unlock();
+});
+window.addEventListener('mouseup', () => { state.mouse.down = false; });
+canvas.addEventListener('mousemove', (e) => {
+  const r = canvas.getBoundingClientRect();
+  state.mouse.x = (e.clientX - r.left) * (VIEW_W / r.width);
+  state.mouse.y = (e.clientY - r.top) * (VIEW_H / r.height);
+});
+document.getElementById('muteBtn').addEventListener('click', () => {
+  const m = state.audio.toggleMute();
+  document.getElementById('muteBtn').textContent = m ? '🔇 Muted' : '🔊 Sound';
+});
+
+// Exposed for playtesting through the devtools protocol.
+window.__solmar = state;
+window.__solmarReady = false;
+
+let last = performance.now();
+let frames = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  state.time = now / 1000;
+  update(state, dt);
+  deriveDisplay(state);
+  ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+  if (state.screen === 'start') {
+    drawStartScreen(ctx, state, state.time);
+  } else if (state.screen === 'over') {
+    drawWorld(ctx, state, state.time);
+    drawGameOver(ctx, state);
+  } else {
+    drawWorld(ctx, state, state.time);
+    drawHUD(ctx, state);
+    if (state.paused) drawPause(ctx);
+  }
+  frames++;
+  if (frames === 5) window.__solmarReady = true;
   requestAnimationFrame(frame);
-})();
+}
+requestAnimationFrame(frame);

@@ -4,20 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SOLMAR — Vice Harbor</title>
+<link rel="icon" href="data:,">
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0a1022; }
-  #game { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+  html, body { margin: 0; padding: 0; background: #0a0e14; height: 100%; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: system-ui, sans-serif; }
+  #wrap { position: relative; }
+  canvas { display: block; width: min(1280px, 100vw, calc((100vh - 48px) * 16 / 9)); height: auto; background: #1a2438; box-shadow: 0 0 60px rgba(0,0,0,0.8); image-rendering: auto; }
+  #bar { display: flex; justify-content: space-between; align-items: center; width: min(1280px, 96vw); color: #b8c8d8; padding: 8px 2px; font-size: 13px; }
+  #muteBtn { background: #1c2634; color: #ffe14a; border: 1px solid #ffe14a55; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  #muteBtn:hover { background: #263448; }
+  a { color: #7fd4c1; }
 </style>
 </head>
 <body>
-<canvas id="game" width="1280" height="720"></canvas>
-<script src="src/util.js"></script>
-<script src="src/city.js"></script>
-<script src="src/audio.js"></script>
-<script src="src/entities.js"></script>
-<script src="src/missions.js"></script>
-<script src="src/render.js"></script>
-<script src="src/game.js"></script>
-<script src="src/main.js"></script>
+<div id="wrap"><canvas id="game" width="1280" height="720"></canvas></div>
+<div id="bar">
+  <span>SOLMAR — Vice Harbor &nbsp;•&nbsp; WASD drive &amp; move &nbsp;•&nbsp; E steal car &nbsp;•&nbsp; M mission &nbsp;•&nbsp; N taxi fare</span>
+  <button id="muteBtn" type="button">🔊 Sound</button>
+</div>
+<script type="module" src="./src/main.js"></script>
 </body>
 </html>
