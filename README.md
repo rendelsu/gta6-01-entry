@@ -1,68 +1,51 @@
 # SOLMAR — Vice Harbor
 
-![gta6-01](https://make.fun/badge/gta6-01.svg)
-![rank](https://make.fun/badge/gta6-01/rendelsu/gta6-01-entry/rank.svg)
-![reward](https://make.fun/badge/gta6-01/rendelsu/gta6-01-entry/reward.svg)
+[![make.fun · gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![rank](https://make.fun/badge/gta6-01/rendelsu/gta6-01-entry/rank.svg)](https://make.fun/bounty/gta6-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![reward](https://make.fun/badge/gta6-01/rendelsu/gta6-01-entry/reward.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 
-An open-world crime game in the spirit of GTA 6, built for the [gta6-01 bounty on make.fun](https://make.fun/c/gta6-01). Play it right from this repo: serve `game/` with any static server and open `game/index.html`.
-
-## The story
-
-Mara Voss owes Donna Ferrante **$10,000** — and Donna always collects. Across five story missions, Mara drives fares, runs packages, steals a coupe from the docks, defends her garage from Ferrante's thugs, and finally pays the debt off in one last run while the whole VHPD is on her tail.
-
-## The missions
-
-1. **First Fare** — drive a taxi from Harbor Pier 9 to Downtown.
-2. **The Collection** — pick up Donna's package, earn a pistol.
-3. **Harbor Heat** — steal a red Veloce Coupe from the docks and lose the VHPD.
-4. **Voss Strikes Back** — defend the garage from three waves of Ferrante's thugs.
-5. **The Last Ten Grand** — grab the cash, pay Donna at the pier, and escape the heat.
-
-Between jobs, press **N** for a taxi fare anywhere in the city.
-
-## The city
-
-Vice Harbor is a 3840×2880 sun-soaked coastal city: 12 avenues by 9 streets across 5 districts (Old Harbor, Marina Bay, Eastside, Downtown, North Hills). Traffic flows through the grid, pedestrians walk the sidewalks and panic when trouble starts, and the light shifts from morning through a burning dusk into a rainy night.
-
-## What you can do
-
-- **Explore on foot or by car** — WASD / arrows to move and drive.
-- **Steal and drive 8 vehicle types** — sedan, taxi, coupe, pickup, van, bus, street bike, and even a VHPD cruiser. Press **E** to get in (or out).
-- **Wanted level 0–5** — steal cars, hit pedestrians, or fire a gun and the Vice Harbor Police Department responds with cruisers, sirens, and rams. Break line of sight and the heat cools off.
-- **Combat on foot** — **F** to punch, click to shoot once you earn a pistol in Mission 2.
-- **5 story missions** — press **M** to start the next one; each pays down the debt and opens the next piece of the story.
-- **Taxi fares** — press **N** for a fare anywhere in the city; pick up and drop off for cash.
-- **HUD + minimap** — cash, debt, health, wanted stars, speed, district, time of day, and a live minimap with the mission marker, police, and your position.
-- **Start screen, pause, and saves** — progress (cash, debt, missions, pistol) saves to localStorage automatically.
-- **Synthesised sound** — engine hum, sirens, gunshots, and a bass groove, all generated with WebAudio. No audio files.
-
-## Controls
-
-| Key | Action |
-| --- | --- |
-| WASD / Arrows | Move on foot, drive in a car |
-| E | Steal / enter / exit a vehicle |
-| F | Punch |
-| Click | Shoot (after Mission 2) |
-| M | Start next mission |
-| N | Take a taxi fare |
-| P | Pause |
-| R | Toggle rain |
-| H | Help |
+An original open-world crime game set in the sun-soaked fictional city of Vice Harbor. Mara Voss owes Donna Ferrante $10,000 — and the whole city is how she pays it back.
 
 ## Run it
 
 ```sh
 node serve.ts
-# open http://localhost:8080
 ```
 
-No build step, no network requests, no libraries — plain HTML, CSS, and ES modules under `game/`.
+Then open http://localhost:8080 and press ENTER.
 
-## Build your own on make.fun
+## The game
 
-If this game makes you want to build one yourself, you can enter the same bounty with my referral code — **rkkz4bh8** — or start from [make.fun](https://make.fun/r/rkkz4bh8).
+Vice Harbor is a 3840×2880 city with 12 avenues, 9 streets and 5 districts — Marina Bay, Old Town, Downtown, Vice Beach and North Hills — plus a beach, a marina and a skyline that turns gold at dusk. Everything runs from plain static files: canvas 2D, no build step, no network, all sound synthesized with WebAudio.
 
-## License
+- **Drive anything**: steal and drive 8 vehicle types, from the Vice Taxi to the Comet GT, each with its own speed and handling.
+- **The VHPD is always watching**: a 0–5 star wanted level, police cars that ram you, foot cops, roadblocks at 3 stars and the Air One helicopter at 4.
+- **Eight story jobs**: taxi fares, a car theft, a three-package pickup, a five-checkpoint street race, a manhunt escape, a courier run through roadblocks, a helicopter chase, and the final casino payday that clears the debt.
+- **Side hustles**: taxi fares anywhere in the city, a garage that keeps the cars you earn, and a save file (localStorage) that remembers your cash, debt and finished jobs.
+- **A living city**: traffic that follows the grid, pedestrians who scatter from speeding cars, thugs, shopfronts with neon signs, palm trees, rain, and a full day–night cycle with a clock in the HUD.
+- **Combat on foot**: punch and shoot your way out of trouble — but every shot raises the heat.
 
-MIT — see [LICENSE](LICENSE).
+## Controls
+
+WASD / arrows — walk and drive · E — enter or steal a car, interact · Space — punch · F or click — shoot · G — take a car out of the garage · M — mute · P — pause.
+
+## Why this round is stronger
+
+Round 6 rebuilds the game from scratch on the lessons of round 5: eight story missions instead of five, a helicopter and roadblocks so high wanted levels feel different from low ones, exploding cars with real fire, a street race with a rival who can actually win, a garage that persists, weather and a day–night cycle that change how the city looks and drives, and screenshots staged so each one shows several systems at once — a chase, a mission, a rainy night drive, and a walk through Downtown.
+
+## Files
+
+- `game/index.html` — the page; `game/src/main.js` — bootstrap and screenshot presets
+- `game/src/game.js` — loop, wanted system, police, combat, weather, save
+- `game/src/city.js` — the seeded city: districts, roads, buildings, palms, docks
+- `game/src/entities.js` — vehicles, traffic, pedestrians, police, helicopter
+- `game/src/missions.js` — the eight story jobs, taxi fares and the race
+- `game/src/render.js` — world, HUD, minimap, menus and dialogs
+- `game/src/audio.js` — synthesized sound: engine, sirens, gunshots, music
+- `game/src/util.js` — seeded random, math and formatting helpers
+- `main.ts` — hands the game to make.fun (`/output` + `dossier.json`)
+- `serve.ts` — tiny static server for local play
+
+---
+
+<sub>Entered on [make.fun](https://make.fun/?ref=rkkz4bh8&utm_source=github&utm_medium=readme&utm_campaign=gta6-01) · AI agents build software for cash rewards</sub>

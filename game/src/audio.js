@@ -1,152 +1,128 @@
-// Synthesised sound: no audio files, everything comes from WebAudio.
-export function makeAudio() {
-  let ctx = null;
-  let master = null;
-  let engineOsc = null;
-  let engineGain = null;
-  let sirenOsc = null;
-  let sirenGain = null;
-  let musicTimer = null;
-  let muted = false;
-  let started = false;
+// SOLMAR — Vice Harbor (r6): all sound is synthesized with WebAudio —
+// engine hum, sirens, gunshots, pickup blips and a low-key synthwave loop.
+// No audio files, no network.
+export class AudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+    this.musicTimer = null;
+    this.engineOsc = null;
+    this.engineGain = null;
+    this.step = 0;
+  }
 
-  function ensure() {
-    if (ctx) return true;
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return false;
-      ctx = new AC();
-      master = ctx.createGain();
-      master.gain.value = 0.5;
-      master.connect(ctx.destination);
-      started = true;
-      return true;
-    } catch (e) {
-      return false;
+  ensure() {
+    if (this.ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    this.ctx = new AC();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.5;
+    this.master.connect(this.ctx.destination);
+    this.startMusic();
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    if (this.master) this.master.gain.value = this.muted ? 0 : 0.5;
+    return this.muted;
+  }
+
+  blip(freq, dur, type, vol) {
+    if (!this.ctx || this.muted) return;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type || 'square';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.15, this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+    o.connect(g); g.connect(this.master);
+    o.start(); o.stop(this.ctx.currentTime + dur);
+  }
+
+  pickup() { this.blip(660, 0.12, 'sine', 0.2); setTimeout(() => this.blip(990, 0.18, 'sine', 0.2), 90); }
+  cash() { [523, 659, 784].forEach((f, i) => setTimeout(() => this.blip(f, 0.15, 'triangle', 0.2), i * 80)); }
+  gunshot() {
+    if (!this.ctx || this.muted) return;
+    const len = 0.12;
+    const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const g = this.ctx.createGain();
+    g.gain.value = 0.3;
+    src.connect(g); g.connect(this.master);
+    src.start();
+  }
+  explosion() {
+    if (!this.ctx || this.muted) return;
+    const len = 0.7;
+    const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.value = 400;
+    const g = this.ctx.createGain();
+    g.gain.value = 0.5;
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start();
+  }
+  siren(on) {
+    if (!this.ctx) return;
+    if (on && !this.sirenOsc) {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 700;
+      g.gain.value = 0.045;
+      const lfo = this.ctx.createOscillator();
+      lfo.frequency.value = 0.6;
+      const lg = this.ctx.createGain();
+      lg.gain.value = 260;
+      lfo.connect(lg); lg.connect(o.frequency);
+      o.connect(g); g.connect(this.master);
+      o.start(); lfo.start();
+      this.sirenOsc = o; this.sirenLfo = lfo; this.sirenGain = g;
+    } else if (!on && this.sirenOsc) {
+      try { this.sirenOsc.stop(); this.sirenLfo.stop(); } catch (e) { /* already stopped */ }
+      this.sirenOsc = null; this.sirenLfo = null; this.sirenGain = null;
     }
   }
-
-  function blip(freq, dur, type, vol, slideTo) {
-    if (!ensure() || muted) return;
-    const t = ctx.currentTime;
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = type || 'sine';
-    o.frequency.setValueAtTime(freq, t);
-    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
-    g.gain.setValueAtTime(vol || 0.2, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    o.connect(g);
-    g.connect(master);
-    o.start(t);
-    o.stop(t + dur + 0.02);
+  engine(on, speed) {
+    if (!this.ctx) return;
+    if (on && !this.engineOsc) {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = 'sawtooth';
+      o.frequency.value = 60;
+      g.gain.value = 0.05;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.value = 500;
+      o.connect(f); f.connect(g); g.connect(this.master);
+      o.start();
+      this.engineOsc = o; this.engineGain = g;
+    } else if (!on && this.engineOsc) {
+      try { this.engineOsc.stop(); } catch (e) { /* already stopped */ }
+      this.engineOsc = null; this.engineGain = null;
+    }
+    if (this.engineOsc) {
+      this.engineOsc.frequency.value = 55 + Math.abs(speed) * 0.9;
+      this.engineGain.gain.value = 0.03 + Math.min(0.06, Math.abs(speed) * 0.0004);
+    }
   }
-
-  function noise(dur, vol, low) {
-    if (!ensure() || muted) return;
-    const t = ctx.currentTime;
-    const len = Math.floor(ctx.sampleRate * dur);
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    const f = ctx.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.value = low || 1200;
-    const g = ctx.createGain();
-    g.gain.value = vol || 0.3;
-    src.connect(f);
-    f.connect(g);
-    g.connect(master);
-    src.start(t);
+  startMusic() {
+    // Slow synthwave loop: bass root notes + a sparse lead, 8 steps a bar.
+    const bass = [55, 55, 65.41, 49, 55, 55, 82.41, 73.42];
+    const lead = [220, 0, 261.63, 0, 329.63, 0, 293.66, 246.94];
+    this.musicTimer = setInterval(() => {
+      if (!this.ctx || this.muted) { this.step++; return; }
+      const i = this.step % 8;
+      if (bass[i]) this.blip(bass[i], 0.5, 'triangle', 0.10);
+      if (lead[i]) this.blip(lead[i], 0.4, 'sine', 0.06);
+      this.step++;
+    }, 340);
   }
-
-  return {
-    unlock() { ensure(); if (ctx && ctx.state === 'suspended') ctx.resume(); },
-    get started() { return started; },
-    toggleMute() {
-      muted = !muted;
-      if (master) master.gain.value = muted ? 0 : 0.5;
-      return muted;
-    },
-    get muted() { return muted; },
-    click() { blip(660, 0.07, 'square', 0.12); },
-    pickup() { blip(520, 0.09, 'sine', 0.22); setTimeout(() => blip(780, 0.12, 'sine', 0.22), 80); },
-    cash() {
-      blip(880, 0.08, 'triangle', 0.2);
-      setTimeout(() => blip(1174, 0.14, 'triangle', 0.2), 90);
-    },
-    gunshot() { noise(0.16, 0.5, 900); },
-    punch() { noise(0.08, 0.35, 500); },
-    crash() { noise(0.3, 0.5, 700); blip(90, 0.25, 'sawtooth', 0.25, 40); },
-    sirenBlip() { blip(980, 0.12, 'square', 0.08, 1240); },
-    mission() {
-      [523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.16, 'triangle', 0.2), i * 110));
-    },
-    fail() { blip(220, 0.3, 'sawtooth', 0.18, 110); },
-    engine(on, speedRatio) {
-      if (!ensure() || muted) return;
-      if (on && !engineOsc) {
-        engineOsc = ctx.createOscillator();
-        engineOsc.type = 'sawtooth';
-        engineGain = ctx.createGain();
-        engineGain.gain.value = 0.05;
-        const f = ctx.createBiquadFilter();
-        f.type = 'lowpass';
-        f.frequency.value = 500;
-        engineOsc.connect(f);
-        f.connect(engineGain);
-        engineGain.connect(master);
-        engineOsc.start();
-      }
-      if (!on && engineOsc) {
-        try { engineOsc.stop(); } catch (e) {}
-        engineOsc = null;
-        engineGain = null;
-        return;
-      }
-      if (engineOsc) {
-        engineOsc.frequency.value = 55 + speedRatio * 130;
-        engineGain.gain.value = 0.03 + speedRatio * 0.05;
-      }
-    },
-    siren(on) {
-      if (!ensure() || muted) return;
-      if (on && !sirenOsc) {
-        sirenOsc = ctx.createOscillator();
-        sirenOsc.type = 'triangle';
-        sirenGain = ctx.createGain();
-        sirenGain.gain.value = 0.045;
-        sirenOsc.connect(sirenGain);
-        sirenGain.connect(master);
-        sirenOsc.start();
-        let hi = false;
-        sirenOsc._iv = setInterval(() => {
-          hi = !hi;
-          try { sirenOsc.frequency.value = hi ? 960 : 720; } catch (e) {}
-        }, 420);
-      }
-      if (!on && sirenOsc) {
-        clearInterval(sirenOsc._iv);
-        try { sirenOsc.stop(); } catch (e) {}
-        sirenOsc = null;
-        sirenGain = null;
-      }
-    },
-    startMusic() {
-      if (!ensure() || musicTimer) return;
-      const bass = [55, 55, 65.4, 49, 55, 55, 73.4, 65.4];
-      let step = 0;
-      musicTimer = setInterval(() => {
-        if (muted) return;
-        blip(bass[step % bass.length], 0.34, 'triangle', 0.1);
-        if (step % 2 === 0) blip(bass[step % bass.length] * 2, 0.1, 'sine', 0.05);
-        step++;
-      }, 340);
-    },
-    stopMusic() {
-      if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
-    },
-  };
 }
